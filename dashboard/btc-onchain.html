@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BTC On-Chain + Mercado — V5</title>
+<script src="./vendor/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel2: #18212d;
+    --border: #243041;
+    --text: #e8eef7;
+    --muted: #8b9bb0;
+    --accent: #5b9dff;
+    --green: #3dd68c;
+    --red: #ff6b7a;
+    --yellow: #f5c542;
+    --purple: #a78bfa;
+    --orange: #ff9f43;
+    --btc: #f7931a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: radial-gradient(1200px 600px at 10% -10%, #152033 0%, var(--bg) 55%);
+    color: var(--text); min-height: 100vh;
+  }
+  header {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--border);
+    background: rgba(11,15,20,.7); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 10;
+  }
+  h1 { margin: 0; font-size: 1.25rem; font-weight: 650; letter-spacing: -.02em; }
+  h1 span { color: var(--btc); }
+  .meta { color: var(--muted); font-size: .85rem; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: var(--panel2); border: 1px solid var(--border); font-size: .78rem;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.warn { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .dot.err { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  a.navlink { color: var(--accent); text-decoration: none; font-size: .85rem; }
+  a.navlink:hover { text-decoration: underline; }
+  button.refresh {
+    cursor: pointer; background: var(--accent); color: #041018; border: 0;
+    border-radius: 8px; padding: 8px 14px; font-weight: 650;
+  }
+  main { padding: 20px 24px 40px; max-width: 1280px; margin: 0 auto; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+  .card {
+    background: linear-gradient(180deg, var(--panel) 0%, #0e141c 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px;
+  }
+  .span-2 { grid-column: span 2; }
+  .span-3 { grid-column: span 3; }
+  .span-4 { grid-column: span 4; }
+  .span-6 { grid-column: span 6; }
+  .span-8 { grid-column: span 8; }
+  .span-12 { grid-column: span 12; }
+  @media (max-width: 1000px) {
+    .span-2, .span-3, .span-4, .span-6, .span-8 { grid-column: span 12; }
+  }
+  .label { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .value { font-size: 1.55rem; font-weight: 700; letter-spacing: -.03em; }
+  .value.sm { font-size: 1.15rem; }
+  .sub { color: var(--muted); font-size: .82rem; margin-top: 4px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82rem; }
+  .chart-wrap { height: 220px; position: relative; }
+  .chart-wrap.tall { height: 280px; }
+  footer { color: var(--muted); font-size: .75rem; padding: 8px 24px 24px; text-align: center; }
+  .gauge-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .gauge { width: 160px; height: 90px; position: relative; }
+  .gauge svg { width: 160px; height: 90px; overflow: visible; }
+  .gauge-score {
+    position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
+    font-size: 1.8rem; font-weight: 800; letter-spacing: -.04em;
+  }
+  .score-label { font-size: .9rem; font-weight: 600; }
+  .heat {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px;
+  }
+  .heat-cell {
+    padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--panel2); text-align: center;
+  }
+  .heat-cell .hname { font-size: .7rem; color: var(--muted); text-transform: uppercase; }
+  .heat-cell .hval { font-weight: 700; margin-top: 4px; font-size: .95rem; }
+  .alert {
+    padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;
+    border: 1px solid var(--border); background: var(--panel2); font-size: .88rem;
+  }
+  .alert.warn { border-color: #5c4a1e; background: #2a2210; }
+  .alert.ok { border-color: #1e5c3f; background: #123325; }
+  .alert.bad { border-color: #6b2a35; background: #3a1a20; }
+  .alert.info { border-color: #2a3d5c; background: #1a2740; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
+  td.interp { color: var(--muted); font-size: .8rem; max-width: 320px; }
+  td.sit { white-space: nowrap; }
+  .nc { color: var(--yellow); font-style: italic; }
+  #eventLog { max-height: 220px; overflow: auto; font-size: .78rem; line-height: 1.5; }
+  .kpi-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .kpi-mini {
+    min-width: 108px; flex: 1; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 10px; background: var(--panel2);
+  }
+  /* Cycle banner */
+  .phase-banner {
+    grid-column: span 12;
+    border-radius: 14px; padding: 16px 20px;
+    border: 1px solid var(--border);
+    background: linear-gradient(90deg, #1a2740 0%, #18212d 50%, #2a2210 100%);
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .phase-banner .phase-name {
+    font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em;
+  }
+  .phase-steps {
+    display: flex; flex-wrap: wrap; gap: 6px; font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .phase-steps span {
+    padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,.25); color: var(--muted); border: 1px solid transparent;
+  }
+  .phase-steps span.active {
+    color: #041018; background: var(--btc); border-color: var(--btc); font-weight: 700;
+  }
+  .badge-live {
+    display: inline-block; font-size: .65rem; padding: 1px 6px; border-radius: 4px;
+    background: #123325; color: var(--green); margin-left: 4px; vertical-align: middle;
+  }
+  .badge-nc {
+    display: inline-block; font-size: .65rem; padding: 1px 6px; border-radius: 4px;
+    background: #2a2210; color: var(--yellow); margin-left: 4px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Dashboard <span>BTC On-Chain</span> + Mercado <small style="color:var(--muted);font-weight:500">V5</small></h1>
+    <div class="meta" style="margin-top:6px">
+      <span class="pill"><span id="liveDot" class="dot warn"></span> <span id="liveLabel">carregando…</span></span>
+      <span class="pill">Dados (servidor): <strong id="updAt">—</strong></span>
+      <span class="pill">market.json: <strong id="mktAt">—</strong></span>
+      <span class="pill">Fase (interpretação): <strong id="phaseLabel">—</strong></span>
+    </div>
+  </div>
+  <div class="meta">
+    <button class="refresh" id="refreshBtn">Atualizar</button>
+  </div>
+</header>
+
+<main>
+  <div id="srvBanner" style="display:none;margin:0 0 12px;padding:10px 14px;border-radius:10px;border:1px solid #6b2a35;background:#3a1a20;color:#ffb3bc;font-size:.85rem"></div>
+  <div id="srcList" class="mono" style="margin:0 0 12px;color:var(--muted);font-size:.74rem;line-height:1.5"></div>
+  <div class="grid">
+    <!-- Cycle phase banner -->
+    <div class="phase-banner" id="phaseBanner">
+      <div>
+        <div class="label">Fase do ciclo (confluência — interpretação, não fato)</div>
+        <div class="phase-name" id="phaseBig">—</div>
+        <div class="sub" id="phaseWhy" style="margin-top:6px;max-width:640px">—</div>
+      </div>
+      <div class="phase-steps" id="phaseSteps">
+        <span data-p="CAPITULAÇÃO">Capitulação</span>
+        <span data-p="ACUMULAÇÃO">Acumulação</span>
+        <span data-p="RECUPERAÇÃO">Recuperação</span>
+        <span data-p="EXPANSÃO">Expansão</span>
+        <span data-p="EUFORIA">Euforia</span>
+        <span data-p="DISTRIBUIÇÃO">Distribuição</span>
+      </div>
+    </div>
+
+    <!-- Score + Gauge -->
+    <div class="card span-4">
+      <div class="label">Score de oportunidade (entrada)</div>
+      <div class="gauge-wrap">
+        <div class="gauge">
+          <svg viewBox="0 0 160 90">
+            <path d="M10 80 A70 70 0 0 1 150 80" fill="none" stroke="#243041" stroke-width="14" stroke-linecap="round"/>
+            <path id="gaugeArc" d="M10 80 A70 70 0 0 1 150 80" fill="none" stroke="#5b9dff" stroke-width="14"
+              stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="220"/>
+          </svg>
+          <div class="gauge-score" id="scoreVal">—</div>
+        </div>
+        <div>
+          <div class="score-label" id="scoreClass">—</div>
+          <div class="sub" id="scoreHint">0–10 · atratividade de compra, não força do preço</div>
+          <div class="sub" style="margin-top:8px">Entrada: <strong id="sigIn">—</strong></div>
+          <div class="sub">Saída: <strong id="sigOut">—</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BTC core KPIs -->
+    <div class="card span-2">
+      <div class="label">BTC</div>
+      <div class="value sm" id="btcPrice">—</div>
+      <div class="sub" id="btcChg">24h —</div>
+    </div>
+    <div class="card span-2">
+      <div class="label">ETH</div>
+      <div class="value sm" id="ethPrice">—</div>
+      <div class="sub" id="ethChg">24h —</div>
+    </div>
+    <div class="card span-2">
+      <div class="label">Fear &amp; Greed</div>
+      <div class="value sm" id="fngVal">—</div>
+      <div class="sub" id="fngLabel">—</div>
+    </div>
+    <div class="card span-2">
+      <div class="label">RSI (14, approx)</div>
+      <div class="value sm" id="rsiVal">—</div>
+      <div class="sub" id="rsiLabel">—</div>
+    </div>
+
+    <!-- Funding / Hashrate / Dom / Mayer -->
+    <div class="card span-3">
+      <div class="label">Funding BTC perpetual</div>
+      <div class="value sm" id="fundingVal">—</div>
+      <div class="sub" id="fundingHint">Binance BTCUSDT</div>
+    </div>
+    <div class="card span-3">
+      <div class="label">Hashrate (aprox.)</div>
+      <div class="value sm" id="hashVal">—</div>
+      <div class="sub" id="hashHint">mempool.space</div>
+    </div>
+    <div class="card span-3">
+      <div class="label">Dominância BTC</div>
+      <div class="value sm" id="domVal">—</div>
+      <div class="sub">vs alts (CoinGecko global)</div>
+    </div>
+    <div class="card span-3">
+      <div class="label">Mayer Multiple</div>
+      <div class="value sm" id="mayerVal">—</div>
+      <div class="sub" id="mayerHint">preço / SMA200</div>
+    </div>
+
+    <!-- Extra public KPIs -->
+    <div class="card span-12">
+      <div class="label">KPIs públicos extras</div>
+      <div class="kpi-row" id="extraKpiRow" style="margin-top:8px">
+        <div class="kpi-mini"><div class="sub">Mkt Cap Total</div><div style="font-weight:700" id="mcapTotal">—</div><div class="sub" id="mcapChg">24h —</div></div>
+        <div class="kpi-mini"><div class="sub">Dominância ETH</div><div style="font-weight:700" id="ethDom">—</div><div class="sub">CoinGecko global</div></div>
+        <div class="kpi-mini"><div class="sub">Volume BTC 24h</div><div style="font-weight:700" id="btcVol">—</div><div class="sub">CoinGecko</div></div>
+        <div class="kpi-mini"><div class="sub">Stablecoins mcap</div><div style="font-weight:700" id="stableMcap">—</div><div class="sub">DeFiLlama</div></div>
+        <div class="kpi-mini"><div class="sub">Mempool fees</div><div style="font-weight:700" id="mempoolFees">—</div><div class="sub">sat/vB · mempool.space</div></div>
+        <div class="kpi-mini"><div class="sub">Pi Cycle (111 vs 2×350)</div><div style="font-weight:700" id="piCycleMini">—</div><div class="sub" id="piCycleMiniHint">distância %</div></div>
+      </div>
+    </div>
+
+    <!-- SMAs / Pi Cycle card -->
+    <div class="card span-12">
+      <div class="label">Médias móveis &amp; Pi Cycle Top (CoinGecko market_chart diário)</div>
+      <div class="kpi-row" style="margin-top:8px" id="smaRow">
+        <div class="kpi-mini"><div class="sub">SMA50</div><div style="font-weight:700" id="sma50">—</div></div>
+        <div class="kpi-mini"><div class="sub">SMA111</div><div style="font-weight:700" id="sma111">—</div></div>
+        <div class="kpi-mini"><div class="sub">SMA200</div><div style="font-weight:700" id="sma200">—</div></div>
+        <div class="kpi-mini"><div class="sub">SMA350</div><div style="font-weight:700" id="sma350">—</div></div>
+        <div class="kpi-mini"><div class="sub">2× SMA350</div><div style="font-weight:700" id="sma350x2">—</div></div>
+        <div class="kpi-mini"><div class="sub">Pi Cycle status</div><div style="font-weight:700" id="piStatus">—</div><div class="sub" id="piHint">—</div></div>
+      </div>
+      <div class="sub" style="margin-top:8px" id="smaDateHint">—</div>
+    </div>
+
+    <!-- Multi-crypto market strip -->
+    <div class="card span-12">
+      <div class="label">Mercado — criptos relevantes</div>
+      <div class="kpi-row" id="altRow" style="margin-top:8px"></div>
+      <div class="sub" style="margin-top:8px">SOL · BNB · XRP · DOGE · AVAX · LINK · ARB — CoinGecko markets</div>
+    </div>
+
+    <!-- Heatmap -->
+    <div class="card span-6">
+      <div class="label">Heatmap de métricas</div>
+      <div class="heat" id="heatMap" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="card span-6">
+      <div class="label">Alertas &amp; leituras</div>
+      <div id="alertsBox" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="card span-8">
+      <div class="label">BTC — preço 30d (USD)</div>
+      <div class="chart-wrap tall"><canvas id="priceChart"></canvas></div>
+    </div>
+    <div class="card span-4">
+      <div class="label">Fear &amp; Greed (histórico)</div>
+      <div class="chart-wrap tall"><canvas id="fngChart"></canvas></div>
+    </div>
+
+    <!-- ETF placeholder -->
+    <div class="card span-6">
+      <div class="label">ETF Spot BTC (contexto)</div>
+      <div class="sub" id="etfNote" style="margin-top:8px;line-height:1.5">
+        Fluxos diários de ETF spot exigem fonte paga (SoSoValue / Farside). Este painel não inventa números —
+        consulte fontes públicas para o fluxo do dia. O score já incorpora Fear &amp; Greed, funding e momentum.
+      </div>
+      <div class="sub" style="margin-top:10px" id="etfCtx">—</div>
+    </div>
+
+    <!-- News / skill note -->
+    <div class="card span-6">
+      <div class="label">Notícias / contexto</div>
+      <div class="sub" style="margin-top:8px;line-height:1.55">
+        Feed de notícias omitido neste painel (fontes frágeis / rate-limit). Para panorama completo de 24–72h
+        (ETF, Fed, regulação, mineradores, fluxo institucional), rode o skill
+        <strong>Relatório on-chain BTC</strong>
+        (<span class="mono">skills/relatorio-onchain-btc/SKILL.md</span>).
+      </div>
+    </div>
+
+    <!-- Full skill checklist table -->
+    <div class="card span-12">
+      <div class="label">Tabela completa do skill — checklist 1–22 (Métrica · Valor · Situação · Interpretação)</div>
+      <div class="sub" style="margin-bottom:8px">
+        Ao vivo = fonte pública / computável. Caso contrário = <span class="nc">Dado atual não confirmado</span> (nunca inventado).
+      </div>
+      <div style="overflow-x:auto;margin-top:4px">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Métrica</th>
+              <th>Valor atual</th>
+              <th>Situação</th>
+              <th>Interpretação</th>
+            </tr>
+          </thead>
+          <tbody id="skillBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Event log -->
+    <div class="card span-12">
+      <div class="label">Log de atualização</div>
+      <div id="eventLog" class="mono" style="margin-top:8px"></div>
+    </div>
+  </div>
+</main>
+<footer>
+  Fontes: CoinGecko · Alternative.me · Binance Futures · mempool.space · DeFiLlama · somente leitura · sem chaves ·
+  Glassnode / CryptoQuant / Checkonchain / Bitcoin Magazine Pro = “Dado atual não confirmado” ·
+  Fase do ciclo = interpretação por confluência
+</footer>
+
+<script>
+// All data comes from same-origin ./market.json (built server-side by fetch_market.py)
+let MKT = null;
+const DS_LABEL = {markets:"Preços", global:"Global/dominância", btc_chart:"BTC diário (SMAs)", fng:"Fear&Greed",
+  funding:"Funding", hashrate:"Hashrate", fees:"Mempool fees", stables:"Stablecoins"};
+function srv(name) {
+  const ds = MKT && MKT.datasets ? MKT.datasets[name] : null;
+  if (!ds) throw new Error("market.json sem " + name);
+  if (!ds.ok || ds.data == null) throw new Error((ds.error || "indisponível").slice(0, 160));
+  if (ds.stale) log(`AVISO ${name}: dado antigo (${ds.fetched_at_brt} BRT) — ${String(ds.error||"").slice(0,120)}`);
+  return ds.data;
+}
+async function loadMarketJson() {
+  const r = await fetch("./market.json?t=" + Date.now(), { cache: "no-store" });
+  if (!r.ok) throw new Error("market.json HTTP " + r.status);
+  MKT = await r.json();
+  return MKT;
+}
+function renderSources(errors) {
+  const el = document.getElementById("srcList"), ban = document.getElementById("srvBanner");
+  const dss = (MKT && MKT.datasets) || {};
+  el.innerHTML = Object.entries(dss).map(([k, d]) =>
+    `${DS_LABEL[k]||k}: ${d.ok && d.data!=null ? (d.stale ? '<span style="color:#f5c542">ANTIGO</span> ' : '') + (d.source||"—") + " · " + (d.fetched_at_brt||"—").slice(5,16) + " BRT"
+      : '<span style="color:#ff6b7a">ERRO</span>'}`).join(" &nbsp;|&nbsp; ");
+  const bad = Object.entries(dss).filter(([k, d]) => !d.ok || d.data == null || d.stale)
+    .map(([k, d]) => `${DS_LABEL[k]||k}: ${d.stale ? "dado antigo — " : ""}${d.error || "indisponível"}`);
+  if (errors && errors.includes("market.json")) bad.unshift("market.json não carregou — painel sem dados do servidor");
+  ban.style.display = bad.length ? "block" : "none";
+  ban.innerHTML = bad.length ? "<strong>Falhas de dados (servidor):</strong><br>" + bad.map(x => x.replace(/[<>&]/g, "")).join("<br>") : "";
+}
+const ALT_IDS = [
+  { id: "solana", sym: "SOL" },
+  { id: "binancecoin", sym: "BNB" },
+  { id: "ripple", sym: "XRP" },
+  { id: "dogecoin", sym: "DOGE" },
+  { id: "avalanche-2", sym: "AVAX" },
+  { id: "chainlink", sym: "LINK" },
+  { id: "arbitrum", sym: "ARB" },
+];
+const ALL_IDS = ["bitcoin","ethereum", ...ALT_IDS.map(a => a.id)].join(",");
+const NC = "Dado atual não confirmado";
+
+const fmt = (n, d=2) => (n==null || Number.isNaN(+n)) ? "—" : Number(n).toLocaleString("pt-BR", {minimumFractionDigits:d, maximumFractionDigits:d});
+const money = (n, d) => n==null ? "—" : "US$ " + fmt(n, d ?? (Math.abs(n) < 10 ? 4 : 2));
+const moneyCompact = (n) => {
+  if (n==null || Number.isNaN(+n)) return "—";
+  const a = Math.abs(n);
+  if (a >= 1e12) return "US$ " + fmt(n/1e12, 2) + " T";
+  if (a >= 1e9) return "US$ " + fmt(n/1e9, 2) + " B";
+  if (a >= 1e6) return "US$ " + fmt(n/1e6, 2) + " M";
+  return money(n, 0);
+};
+const pct = (n) => n==null ? "—" : `${n>=0?"+":""}${fmt(n,2)}%`;
+const nowBrt = () => new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+const dateBrt = (tsMs) => new Date(tsMs).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+let priceChart, fngChart;
+const logLines = [];
+function log(msg) {
+  logLines.unshift(`[${nowBrt()}] ${msg}`);
+  if (logLines.length > 50) logLines.pop();
+  const el = document.getElementById("eventLog");
+  if (el) el.textContent = logLines.join("\n");
+}
+
+function setDot(ok, warn) {
+  const d = document.getElementById("liveDot");
+  d.className = "dot " + (ok ? "" : warn ? "warn" : "err");
+  document.getElementById("liveLabel").textContent = ok ? "ao vivo" : warn ? "parcial" : "erro";
+}
+
+function chgClass(n) {
+  if (n==null) return "";
+  return n >= 0 ? "pos" : "neg";
+}
+
+function calcRSI(closes, period=14) {
+  if (!closes || closes.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const d = closes[i] - closes[i-1];
+    if (d >= 0) gains += d; else losses -= d;
+  }
+  let avgG = gains / period, avgL = losses / period;
+  for (let i = period + 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i-1];
+    const g = d > 0 ? d : 0, l = d < 0 ? -d : 0;
+    avgG = (avgG * (period - 1) + g) / period;
+    avgL = (avgL * (period - 1) + l) / period;
+  }
+  if (avgL === 0) return 100;
+  const rs = avgG / avgL;
+  return 100 - (100 / (1 + rs));
+}
+
+function sma(arr, n) {
+  if (!arr || arr.length < n) return null;
+  const slice = arr.slice(-n);
+  return slice.reduce((a,b)=>a+b,0) / n;
+}
+
+function scoreFrom(fng, rsi, fundingPct, mayer, btcChg24, piDist) {
+  let s = 5;
+  if (fng != null) {
+    if (fng <= 20) s += 2.2;
+    else if (fng <= 35) s += 1.2;
+    else if (fng <= 50) s += 0.3;
+    else if (fng <= 65) s -= 0.5;
+    else if (fng <= 80) s -= 1.4;
+    else s -= 2.2;
+  }
+  if (rsi != null) {
+    if (rsi < 30) s += 1.5;
+    else if (rsi < 40) s += 0.7;
+    else if (rsi > 70) s -= 1.5;
+    else if (rsi > 60) s -= 0.6;
+  }
+  if (fundingPct != null) {
+    if (fundingPct < -0.01) s += 0.8;
+    else if (fundingPct > 0.05) s -= 1.0;
+    else if (fundingPct > 0.02) s -= 0.4;
+  }
+  if (mayer != null) {
+    if (mayer < 0.8) s += 1.2;
+    else if (mayer < 1.0) s += 0.5;
+    else if (mayer > 2.4) s -= 1.5;
+    else if (mayer > 1.5) s -= 0.5;
+  }
+  if (piDist != null && piDist > -2 && piDist < 5) s -= 0.8; // approaching / crossed top
+  if (piDist != null && piDist >= 0) s -= 1.2;
+  if (btcChg24 != null && btcChg24 < -8) s += 0.4;
+  if (btcChg24 != null && btcChg24 > 10) s -= 0.3;
+  return Math.max(0, Math.min(10, Math.round(s * 10) / 10));
+}
+
+function classifyScore(s) {
+  if (s < 2) return "risco extremo / evitar entrada";
+  if (s < 4) return "risco elevado";
+  if (s < 6) return "neutro";
+  if (s < 7) return "oportunidade moderada";
+  if (s < 8) return "boa oportunidade";
+  if (s < 9) return "oportunidade forte";
+  return "oportunidade histórica / capitulação";
+}
+
+function signals(score, fng, rsi, piDist) {
+  let inn = "🟡 Neutro", out = "⚪ Fraco / inexistente";
+  if (score >= 7.5 || (fng != null && fng <= 25) || (rsi != null && rsi < 30))
+    inn = "🟢 Moderado / Forte";
+  else if (score >= 6) inn = "🟢 Moderado";
+  else if (score <= 3.5) inn = "🔴 Fraco";
+  if ((fng != null && fng >= 80) || (rsi != null && rsi > 75) || score <= 2.5 || (piDist != null && piDist >= 0))
+    out = "🔴 Atenção / Moderado";
+  else if ((fng != null && fng >= 65) || (rsi != null && rsi > 65) || (piDist != null && piDist > -5))
+    out = "🟠 Atenção";
+  return { inn, out };
+}
+
+/** Map confluence → cycle phase (interpretation) */
+function phaseFromConfluence(fng, rsi, mayer, piDist) {
+  const reasons = [];
+  // Priority: extreme top / capitulation first
+  if (piDist != null && piDist >= 0) {
+    reasons.push(`Pi Cycle cruzou (111DMA ≥ 2×350DMA, dist ${fmt(piDist,2)}%)`);
+    if (fng != null && fng >= 70) reasons.push(`F&G ${Math.round(fng)} eufórico`);
+    return { phase: "DISTRIBUIÇÃO", why: reasons.join(" · ") };
+  }
+  if (fng != null && fng <= 20 && mayer != null && mayer < 0.85 && (rsi == null || rsi < 35)) {
+    reasons.push(`F&G ${Math.round(fng)} extremo`, `Mayer ${fmt(mayer,2)}×`, rsi != null ? `RSI ${fmt(rsi,0)}` : null);
+    return { phase: "CAPITULAÇÃO", why: reasons.filter(Boolean).join(" · ") };
+  }
+  if (fng != null && fng >= 75 && mayer != null && mayer > 1.8) {
+    reasons.push(`F&G ${Math.round(fng)}`, `Mayer ${fmt(mayer,2)}× esticado`);
+    if (rsi != null && rsi > 65) reasons.push(`RSI ${fmt(rsi,0)}`);
+    return { phase: "EUFORIA", why: reasons.join(" · ") };
+  }
+  if (mayer != null && mayer > 2.2 && fng != null && fng >= 60) {
+    reasons.push(`Mayer ${fmt(mayer,2)}×`, `F&G ${Math.round(fng)}`);
+    return { phase: "DISTRIBUIÇÃO", why: reasons.join(" · ") + " (risco de distribuição)" };
+  }
+  if (fng != null && fng <= 35 && mayer != null && mayer < 1.05) {
+    reasons.push(`F&G ${Math.round(fng)} medo/cautela`, `Mayer ${fmt(mayer,2)}× ≤ ~1`);
+    return { phase: "ACUMULAÇÃO", why: reasons.join(" · ") };
+  }
+  if (rsi != null && rsi > 55 && fng != null && fng > 50 && mayer != null && mayer >= 1 && mayer < 1.8) {
+    reasons.push(`RSI ${fmt(rsi,0)}`, `F&G ${Math.round(fng)}`, `Mayer ${fmt(mayer,2)}×`);
+    return { phase: "EXPANSÃO", why: reasons.join(" · ") };
+  }
+  if ((fng != null && fng < 50 && fng > 30) || (rsi != null && rsi < 50 && mayer != null && mayer < 1.2)) {
+    reasons.push(fng != null ? `F&G ${Math.round(fng)}` : null, rsi != null ? `RSI ${fmt(rsi,0)}` : null, mayer != null ? `Mayer ${fmt(mayer,2)}×` : null);
+    return { phase: "RECUPERAÇÃO", why: reasons.filter(Boolean).join(" · ") };
+  }
+  reasons.push("métricas em zona intermediária / mistas");
+  if (fng != null) reasons.push(`F&G ${Math.round(fng)}`);
+  if (mayer != null) reasons.push(`Mayer ${fmt(mayer,2)}×`);
+  return { phase: "RECUPERAÇÃO", why: reasons.join(" · ") + " (default cauteloso)" };
+}
+
+function setGauge(score) {
+  const arc = document.getElementById("gaugeArc");
+  const len = 220;
+  const offset = len - (len * (score / 10));
+  arc.style.strokeDashoffset = offset;
+  let color = "#5b9dff";
+  if (score >= 7) color = "#3dd68c";
+  else if (score >= 5) color = "#f5c542";
+  else if (score < 3.5) color = "#ff6b7a";
+  arc.setAttribute("stroke", color);
+  document.getElementById("scoreVal").textContent = fmt(score, 1);
+  document.getElementById("scoreVal").style.color = color;
+}
+
+function heatColor(kind, val) {
+  if (kind === "fng") {
+    if (val <= 25) return { bg: "#123325", fg: "#3dd68c", label: "medo" };
+    if (val <= 45) return { bg: "#1a2740", fg: "#5b9dff", label: "cautela" };
+    if (val <= 55) return { bg: "#2a2210", fg: "#f5c542", label: "neutro" };
+    if (val <= 75) return { bg: "#3a2a10", fg: "#ff9f43", label: "ganância" };
+    return { bg: "#3a1a20", fg: "#ff6b7a", label: "euforia" };
+  }
+  if (kind === "rsi") {
+    if (val < 30) return { bg: "#123325", fg: "#3dd68c", label: "sobrevendido" };
+    if (val > 70) return { bg: "#3a1a20", fg: "#ff6b7a", label: "sobrecomprado" };
+    return { bg: "#1a2740", fg: "#5b9dff", label: "neutro" };
+  }
+  if (kind === "funding") {
+    if (val < 0) return { bg: "#123325", fg: "#3dd68c", label: "shorts pagam" };
+    if (val > 0.03) return { bg: "#3a1a20", fg: "#ff6b7a", label: "longs caros" };
+    return { bg: "#1a2740", fg: "#5b9dff", label: "neutro" };
+  }
+  if (kind === "mayer") {
+    if (val < 1) return { bg: "#123325", fg: "#3dd68c", label: "abaixo SMA" };
+    if (val > 2.4) return { bg: "#3a1a20", fg: "#ff6b7a", label: "esticado" };
+    return { bg: "#1a2740", fg: "#5b9dff", label: "ok" };
+  }
+  if (kind === "pi") {
+    if (val >= 0) return { bg: "#3a1a20", fg: "#ff6b7a", label: "cruzou" };
+    if (val > -5) return { bg: "#2a2210", fg: "#f5c542", label: "próximo" };
+    return { bg: "#1a2740", fg: "#5b9dff", label: "longe" };
+  }
+  return { bg: "#18212d", fg: "#e8eef7", label: "—" };
+}
+
+async function fetchJSON(url, opts) {
+  const r = await fetch(url, { cache: "no-store", ...opts });
+  if (!r.ok) throw new Error(`HTTP ${r.status} ${url.split("?")[0].slice(-48)}`);
+  return r.json();
+}
+
+function mayerSit(m) {
+  if (m == null) return "—";
+  if (m < 0.8) return "fundo histórico (zona)";
+  if (m < 1.0) return "abaixo SMA200";
+  if (m < 1.5) return "neutro / saudável";
+  if (m < 2.4) return "aquecido";
+  return "esticado / topo-risco";
+}
+
+function fngSit(v) {
+  if (v == null) return "—";
+  if (v <= 25) return "medo extremo";
+  if (v <= 45) return "medo / cautela";
+  if (v <= 55) return "neutro";
+  if (v <= 75) return "ganância";
+  return "ganância extrema";
+}
+
+function buildSkillRows(ctx) {
+  const {
+    btc, asOf, sma50, sma111, sma200, sma350, sma350x2, mayer,
+    fng, fngClass, rsi, piDist, piCrossed, chartN
+  } = ctx;
+  const live = (v) => v;
+  const nc = (src) => ({ valor: NC, sit: "—", interp: `Fonte preferida: ${src}. Sem leitura pública confiável agora.` });
+
+  const rows = [];
+
+  // 1 Preço
+  rows.push({
+    n: 1, metrica: "Preço atual do BTC",
+    valor: btc ? `${money(btc.current_price, 0)} (${asOf})` : NC,
+    sit: btc ? `24h ${pct(btc.price_change_percentage_24h)}` : "—",
+    interp: btc ? "Spot CoinGecko — referência de mercado." : "CoinGecko indisponível.",
+    live: !!btc
+  });
+
+  // 2 MVRV Z
+  const m2 = nc("Glassnode / LookIntoBitcoin");
+  rows.push({ n: 2, metrica: "MVRV Z-Score", ...m2, live: false });
+
+  // 3 Classic MVRV
+  const m3 = nc("Glassnode / CoinMetrics");
+  rows.push({ n: 3, metrica: "Classic MVRV / MVRV Ratio", ...m3, live: false });
+
+  // 4 Mayer
+  rows.push({
+    n: 4, metrica: "Mayer Multiple",
+    valor: mayer != null ? `${fmt(mayer, 2)}× (${asOf})` : NC,
+    sit: mayerSit(mayer),
+    interp: mayer != null
+      ? `Preço / SMA200. Histórico: &lt;1 acumular; &gt;2,4 risco de topo.`
+      : "Requer SMA200 do market_chart.",
+    live: mayer != null
+  });
+
+  // 5 SMA200
+  rows.push({
+    n: 5, metrica: "SMA 200 dias",
+    valor: sma200 != null ? `${money(sma200, 0)} (${asOf})` : NC,
+    sit: btc && sma200 != null ? (btc.current_price >= sma200 ? "preço acima" : "preço abaixo") : "—",
+    interp: sma200 != null
+      ? `Média de ${Math.min(200, chartN)} fechamentos diários (CoinGecko).`
+      : "CoinGecko market_chart insuficiente.",
+    live: sma200 != null
+  });
+
+  // 6–10 Glassnode family
+  rows.push({ n: 6, metrica: "Realized Price", ...nc("Glassnode / CoinMetrics"), live: false });
+  rows.push({ n: 7, metrica: "Short-Term Holder Realized Price", ...nc("Glassnode"), live: false });
+  rows.push({ n: 8, metrica: "Long-Term Holder Realized Price", ...nc("Glassnode"), live: false });
+  rows.push({ n: 9, metrica: "True Market Mean", ...nc("Checkonchain / Glassnode"), live: false });
+  rows.push({ n: 10, metrica: "AVIV Ratio", ...nc("Glassnode / Checkonchain"), live: false });
+
+  // 11–12 SOPR
+  rows.push({ n: 11, metrica: "SOPR", ...nc("Glassnode / CryptoQuant"), live: false });
+  rows.push({ n: 12, metrica: "BTC SOPR / aSOPR", ...nc("Glassnode / CryptoQuant"), live: false });
+
+  // 13 NUPL
+  rows.push({ n: 13, metrica: "NUPL", ...nc("Glassnode / LookIntoBitcoin"), live: false });
+
+  // 14–15 CDD CVDD
+  rows.push({ n: 14, metrica: "Coin Days Destroyed (CDD)", ...nc("Glassnode / LookIntoBitcoin"), live: false });
+  rows.push({ n: 15, metrica: "CVDD", ...nc("LookIntoBitcoin / Bitcoin Magazine Pro"), live: false });
+
+  // 16 F&G
+  rows.push({
+    n: 16, metrica: "Fear & Greed Index",
+    valor: fng != null ? `${Math.round(fng)} — ${fngClass || ""} (${asOf})` : NC,
+    sit: fngSit(fng),
+    interp: fng != null
+      ? "Alternative.me — sentimento retail (contrarian em extremos)."
+      : "Alternative.me indisponível.",
+    live: fng != null
+  });
+
+  // 17 Pi Cycle
+  let piValor = NC, piSit = "—", piInterp = "Requer SMA111 e 2×SMA350 (market_chart ≥350d).";
+  if (sma111 != null && sma350x2 != null && piDist != null) {
+    piValor = `111DMA ${money(sma111,0)} vs 2×350 ${money(sma350x2,0)} · dist ${fmt(piDist,2)}% (${asOf})`;
+    if (piCrossed) {
+      piSit = "CRUZAMENTO (topo histórico típico)";
+      piInterp = "111DMA ≥ 2×350DMA — sinal clássico de Pi Cycle Top (interpretação, não ordem de venda automática).";
+    } else if (piDist > -5) {
+      piSit = "próximo do cruzamento";
+      piInterp = `Faltam ~${fmt(Math.abs(piDist),2)}% para o cruzamento. Monitorar com F&G / Mayer.`;
+    } else {
+      piSit = "sem cruzamento";
+      piInterp = `111DMA abaixo de 2×350DMA (${fmt(piDist,2)}%). Sem sinal de topo Pi Cycle.`;
+    }
+  }
+  rows.push({ n: 17, metrica: "Pi Cycle Top Indicator", valor: piValor, sit: piSit, interp: piInterp, live: sma111 != null && sma350x2 != null });
+
+  // 18 Hash Ribbons — we have hashrate proxy but not the ribbon signal itself
+  rows.push({ n: 18, metrica: "Hash Ribbons", ...nc("LookIntoBitcoin / CoinDance + difficulty"), live: false });
+
+  // 19 Puell
+  rows.push({ n: 19, metrica: "Puell Multiple", ...nc("LookIntoBitcoin / Glassnode"), live: false });
+
+  // 20 SOAB
+  rows.push({ n: 20, metrica: "Spent Output Age Bands / old-coin", ...nc("Glassnode"), live: false });
+
+  // 21 Exchange reserves
+  rows.push({ n: 21, metrica: "BTC exchange reserves", ...nc("CryptoQuant / Glassnode"), live: false });
+
+  // 22 Illiquid / LTH
+  rows.push({ n: 22, metrica: "Illiquid supply / LTH behavior", ...nc("Glassnode"), live: false });
+
+  // Extra computable SMAs as appendix rows (not in 1-22 but useful) — shown in SMA card; optional footnote in table via SMA50 note in interp of #5
+
+  return rows;
+}
+
+function renderSkillTable(rows) {
+  document.getElementById("skillBody").innerHTML = rows.map(r => {
+    const badge = r.live
+      ? `<span class="badge-live">ao vivo</span>`
+      : `<span class="badge-nc">não confirmado</span>`;
+    const valorCls = r.live ? "mono" : "mono nc";
+    return `<tr>
+      <td class="mono">${r.n}</td>
+      <td>${r.metrica}${badge}</td>
+      <td class="${valorCls}">${r.valor}</td>
+      <td class="sit">${r.sit}</td>
+      <td class="interp">${r.interp}</td>
+    </tr>`;
+  }).join("");
+}
+
+async function load() {
+  const errors = [];
+  try { await loadMarketJson(); log(`market.json OK (${MKT.updated_at})`); }
+  catch (e) { errors.push("market.json"); log("ERR " + e.message); MKT = null; }
+  let markets = [], fng = null, fngHist = [], fngClass = "", fundingPct = null, hashEh = null;
+  let chartPrices = [], chartTs = [], globalData = null;
+  let stableMcap = null, fees = null;
+
+  // Parallel-ish fetches with individual try/catch
+  const tasks = [
+    (async () => {
+      try {
+        markets = srv("markets");
+        log(`Preços OK (${markets.length}) · ${MKT.datasets.markets.source}`);
+      } catch (e) { errors.push("markets"); log("ERR markets: " + e.message); }
+    })(),
+    (async () => {
+      try {
+        const f = srv("fng");
+        fngHist = (f.data || []).map(x => ({ v: +x.value, t: x.timestamp, l: x.value_classification })).reverse();
+        if (fngHist.length) {
+          fng = fngHist[fngHist.length - 1].v;
+          fngClass = fngHist[fngHist.length - 1].l || "";
+        }
+        log(`Fear&Greed OK: ${fng}`);
+      } catch (e) { errors.push("F&G"); log("ERR F&G: " + e.message); }
+    })(),
+    (async () => {
+      try {
+        const px = srv("funding");
+        fundingPct = px.lastFundingRate != null ? Number(px.lastFundingRate) * 100 : null;
+        log(`Funding OK: ${fundingPct != null ? fundingPct.toFixed(4) + "%" : "—"}`);
+      } catch (e) { errors.push("funding"); log("ERR funding: " + e.message); }
+    })(),
+    (async () => {
+      try {
+        const h = srv("hashrate");
+        const hr = h.currentHashrate || (h.hashrates && h.hashrates.length ? h.hashrates[h.hashrates.length-1].avgHashrate : null);
+        if (hr) { hashEh = hr / 1e18; log(`Hashrate OK: ${hashEh.toFixed(1)} EH/s`); }
+      } catch (e) { errors.push("hashrate"); log("ERR hashrate: " + e.message); }
+    })(),
+    (async () => {
+      try {
+        const g = srv("global");
+        globalData = g.data || null;
+        log(`Global OK · BTC.D ${globalData && globalData.market_cap_percentage ? globalData.market_cap_percentage.btc : "—"}%`);
+      } catch (e) { errors.push("global"); log("ERR global: " + e.message); }
+    })(),
+    (async () => {
+      try {
+        // days=max → daily series long enough for SMA350
+        const mc = srv("btc_chart");
+        const pts = mc.prices || [];
+        chartTs = pts.map(p => p[0]);
+        chartPrices = pts.map(p => p[1]);
+        log(`BTC chart OK (${chartPrices.length} pts diários)`);
+      } catch (e) {
+        // fallback shorter window
+        try {
+          const mc = srv("btc_chart");
+          const pts = mc.prices || [];
+          chartTs = pts.map(p => p[0]);
+          chartPrices = pts.map(p => p[1]);
+          log(`BTC chart fallback 365d OK (${chartPrices.length})`);
+        } catch (e2) {
+          errors.push("chart");
+          log("ERR chart: " + e.message + " / " + e2.message);
+        }
+      }
+    })(),
+    (async () => {
+      try {
+        const sc = srv("stables");
+        if (Array.isArray(sc) && sc.length) {
+          const last = sc[sc.length - 1];
+          const usdMap = last.totalCirculatingUSD || last.totalCirculating || {};
+          stableMcap = Object.values(usdMap).reduce((a, b) => a + (Number(b) || 0), 0);
+          log(`Stablecoins OK: ${moneyCompact(stableMcap)}`);
+        }
+      } catch (e) { errors.push("stables"); log("ERR stables: " + e.message); }
+    })(),
+    (async () => {
+      try {
+        fees = srv("fees");
+        log(`Mempool fees OK: ${fees.halfHourFee} sat/vB`);
+      } catch (e) { errors.push("fees"); log("ERR fees: " + e.message); }
+    })(),
+  ];
+  await Promise.all(tasks);
+
+  const by = Object.fromEntries(markets.map(m => [m.id, m]));
+  const btc = by.bitcoin, eth = by.ethereum;
+  const mk = MKT && MKT.datasets && MKT.datasets.markets;
+  const asOf = ((mk && mk.fetched_at_brt) ? mk.fetched_at_brt.slice(0,16) : nowBrt()) + " BRT";
+  const globalDom = globalData && globalData.market_cap_percentage ? globalData.market_cap_percentage.btc : null;
+  const ethDom = globalData && globalData.market_cap_percentage ? globalData.market_cap_percentage.eth : null;
+  const totalMcap = globalData && globalData.total_market_cap ? globalData.total_market_cap.usd : null;
+  const totalMcapChg = globalData && globalData.market_cap_change_percentage_24h_usd != null
+    ? globalData.market_cap_change_percentage_24h_usd : null;
+
+  // Prices
+  if (btc) {
+    document.getElementById("btcPrice").textContent = money(btc.current_price, 0);
+    const ch = btc.price_change_percentage_24h;
+    const el = document.getElementById("btcChg");
+    el.textContent = "24h " + pct(ch);
+    el.className = "sub " + chgClass(ch);
+    document.getElementById("btcVol").textContent = moneyCompact(btc.total_volume);
+  }
+  if (eth) {
+    document.getElementById("ethPrice").textContent = money(eth.current_price, 0);
+    const ch = eth.price_change_percentage_24h;
+    const el = document.getElementById("ethChg");
+    el.textContent = "24h " + pct(ch);
+    el.className = "sub " + chgClass(ch);
+  }
+
+  // Extra KPIs
+  document.getElementById("mcapTotal").textContent = moneyCompact(totalMcap);
+  const mcapChgEl = document.getElementById("mcapChg");
+  mcapChgEl.textContent = "24h " + pct(totalMcapChg);
+  mcapChgEl.className = "sub " + chgClass(totalMcapChg);
+  document.getElementById("ethDom").textContent = ethDom != null ? fmt(ethDom, 2) + "%" : "—";
+  document.getElementById("stableMcap").textContent = moneyCompact(stableMcap);
+  if (fees) {
+    document.getElementById("mempoolFees").textContent =
+      `${fees.fastestFee}/${fees.halfHourFee}/${fees.hourFee}`;
+  }
+
+  // Alts
+  const altRow = document.getElementById("altRow");
+  altRow.innerHTML = ALT_IDS.map(({ id, sym }) => {
+    const c = by[id];
+    if (!c) return `<div class="kpi-mini"><div class="sub">${sym}</div><div style="font-weight:700">—</div></div>`;
+    const ch = c.price_change_percentage_24h || 0;
+    const col = ch >= 0 ? "var(--green)" : "var(--red)";
+    const dig = c.current_price < 1 ? 5 : c.current_price < 10 ? 4 : 2;
+    return `<div class="kpi-mini">
+      <div class="sub">${sym}</div>
+      <div style="font-weight:700">${money(c.current_price, dig)}</div>
+      <div style="color:${col};font-size:.8rem">${pct(ch)} 24h</div>
+    </div>`;
+  }).join("");
+
+  // F&G
+  if (fng != null) {
+    document.getElementById("fngVal").textContent = Math.round(fng);
+    document.getElementById("fngLabel").textContent = fngClass || "—";
+  }
+
+  // SMAs + Pi Cycle + RSI + Mayer
+  const rsi = calcRSI(chartPrices, 14);
+  const sma50 = sma(chartPrices, 50);
+  const sma111 = sma(chartPrices, 111);
+  const sma200 = sma(chartPrices, 200);
+  const sma350 = sma(chartPrices, 350);
+  const sma350x2 = sma350 != null ? sma350 * 2 : null;
+  const mayer = (btc && sma200) ? btc.current_price / sma200 : null;
+  let piDist = null, piCrossed = false;
+  if (sma111 != null && sma350x2 != null && sma350x2 > 0) {
+    piDist = ((sma111 - sma350x2) / sma350x2) * 100;
+    piCrossed = sma111 >= sma350x2;
+  }
+  const lastChartDate = chartTs.length ? dateBrt(chartTs[chartTs.length - 1]) : "—";
+
+  if (rsi != null) {
+    document.getElementById("rsiVal").textContent = fmt(rsi, 1);
+    document.getElementById("rsiLabel").textContent =
+      rsi < 30 ? "sobrevendido" : rsi > 70 ? "sobrecomprado" : "neutro";
+  }
+  if (mayer != null) {
+    document.getElementById("mayerVal").textContent = fmt(mayer, 2) + "×";
+    document.getElementById("mayerHint").textContent =
+      `SMA200 ${money(sma200, 0)} · n=${Math.min(200, chartPrices.length)}d · ${lastChartDate}`;
+  }
+
+  document.getElementById("sma50").textContent = sma50 != null ? money(sma50, 0) : "—";
+  document.getElementById("sma111").textContent = sma111 != null ? money(sma111, 0) : "—";
+  document.getElementById("sma200").textContent = sma200 != null ? money(sma200, 0) : "—";
+  document.getElementById("sma350").textContent = sma350 != null ? money(sma350, 0) : "—";
+  document.getElementById("sma350x2").textContent = sma350x2 != null ? money(sma350x2, 0) : "—";
+
+  if (piDist != null) {
+    const st = piCrossed ? "CRUZOU ▲" : (piDist > -5 ? "PRÓXIMO" : "ABAIXO");
+    document.getElementById("piStatus").textContent = st;
+    document.getElementById("piStatus").style.color = piCrossed ? "var(--red)" : (piDist > -5 ? "var(--yellow)" : "var(--green)");
+    document.getElementById("piHint").textContent = `dist ${fmt(piDist, 2)}% (111 vs 2×350)`;
+    document.getElementById("piCycleMini").textContent = `${fmt(piDist, 2)}%`;
+    document.getElementById("piCycleMini").style.color = piCrossed ? "var(--red)" : (piDist > -5 ? "var(--yellow)" : "var(--text)");
+    document.getElementById("piCycleMiniHint").textContent = piCrossed ? "cruzamento ativo" : "111 abaixo 2×350";
+  }
+  document.getElementById("smaDateHint").textContent =
+    `Série CoinGecko: ${chartPrices.length} pts · último candle ~ ${lastChartDate} · SMA350 requer ≥350 dias`;
+
+  // Funding / hash / dom
+  if (fundingPct != null) {
+    document.getElementById("fundingVal").textContent = fmt(fundingPct, 4) + "%";
+    document.getElementById("fundingVal").className = "value sm " + (fundingPct >= 0 ? "pos" : "neg");
+  }
+  if (hashEh != null) {
+    document.getElementById("hashVal").textContent = fmt(hashEh, 1) + " EH/s";
+  }
+  if (globalDom != null) {
+    document.getElementById("domVal").textContent = fmt(globalDom, 1) + "%";
+  }
+
+  // Phase
+  const { phase, why } = phaseFromConfluence(fng, rsi, mayer, piDist);
+  document.getElementById("phaseLabel").textContent = phase;
+  document.getElementById("phaseBig").textContent = phase;
+  document.getElementById("phaseWhy").textContent = "Suporte: " + why + " · Interpretação por confluência (F&G, Mayer, RSI, Pi Cycle) — não é fato on-chain pago.";
+  document.querySelectorAll("#phaseSteps span").forEach(el => {
+    el.classList.toggle("active", el.getAttribute("data-p") === phase);
+  });
+
+  // Score
+  const score = scoreFrom(fng, rsi, fundingPct, mayer, btc && btc.price_change_percentage_24h, piDist);
+  setGauge(score);
+  document.getElementById("scoreClass").textContent = classifyScore(score);
+  const sig = signals(score, fng, rsi, piDist);
+  document.getElementById("sigIn").textContent = sig.inn;
+  document.getElementById("sigOut").textContent = sig.out;
+
+  // Heatmap
+  const heatItems = [];
+  if (fng != null) heatItems.push({ name: "F&G", val: Math.round(fng), ...heatColor("fng", fng) });
+  if (rsi != null) heatItems.push({ name: "RSI", val: fmt(rsi, 0), ...heatColor("rsi", rsi) });
+  if (fundingPct != null) heatItems.push({ name: "Funding", val: fmt(fundingPct, 3) + "%", ...heatColor("funding", fundingPct) });
+  if (mayer != null) heatItems.push({ name: "Mayer", val: fmt(mayer, 2), ...heatColor("mayer", mayer) });
+  if (piDist != null) heatItems.push({ name: "Pi Cycle", val: fmt(piDist, 1) + "%", ...heatColor("pi", piDist) });
+  if (btc) heatItems.push({
+    name: "BTC 24h", val: pct(btc.price_change_percentage_24h),
+    bg: btc.price_change_percentage_24h >= 0 ? "#123325" : "#3a1a20",
+    fg: btc.price_change_percentage_24h >= 0 ? "#3dd68c" : "#ff6b7a",
+    label: "spot"
+  });
+  if (globalDom != null) heatItems.push({
+    name: "Dom BTC", val: fmt(globalDom, 1) + "%", bg: "#1a2740", fg: "#5b9dff", label: "mkt"
+  });
+  document.getElementById("heatMap").innerHTML = heatItems.map(h =>
+    `<div class="heat-cell" style="background:${h.bg}"><div class="hname">${h.name}</div>
+     <div class="hval" style="color:${h.fg}">${h.val}</div>
+     <div class="sub">${h.label}</div></div>`
+  ).join("") || `<div class="sub">Sem dados</div>`;
+
+  // Alerts
+  const alerts = [];
+  if (fng != null && fng <= 25)
+    alerts.push({ cls: "ok", t: `Fear & Greed em ${Math.round(fng)} — zona de medo (favorável a acumular).` });
+  if (fng != null && fng >= 75)
+    alerts.push({ cls: "bad", t: `Fear & Greed em ${Math.round(fng)} — ganância elevada (cuidado com FOMO).` });
+  if (rsi != null && rsi < 30)
+    alerts.push({ cls: "ok", t: `RSI ≈ ${fmt(rsi,1)} — sobrevendido técnico (aprox. diário).` });
+  if (rsi != null && rsi > 70)
+    alerts.push({ cls: "warn", t: `RSI ≈ ${fmt(rsi,1)} — sobrecomprado técnico.` });
+  if (fundingPct != null && fundingPct > 0.05)
+    alerts.push({ cls: "warn", t: `Funding ${fmt(fundingPct,4)}% — longs pagando caro (risco de squeeze).` });
+  if (fundingPct != null && fundingPct < -0.01)
+    alerts.push({ cls: "ok", t: `Funding negativo (${fmt(fundingPct,4)}%) — shorts pagam (viés construtivo).` });
+  if (mayer != null && mayer < 0.8)
+    alerts.push({ cls: "ok", t: `Mayer ${fmt(mayer,2)}× — preço bem abaixo da SMA longa.` });
+  if (mayer != null && mayer > 2.4)
+    alerts.push({ cls: "bad", t: `Mayer ${fmt(mayer,2)}× — esticado vs SMA longa.` });
+  if (piCrossed)
+    alerts.push({ cls: "bad", t: `Pi Cycle: 111DMA cruzou acima de 2×350DMA (dist ${fmt(piDist,2)}%) — alerta clássico de topo.` });
+  else if (piDist != null && piDist > -5)
+    alerts.push({ cls: "warn", t: `Pi Cycle próximo: faltam ~${fmt(Math.abs(piDist),2)}% para cruzamento.` });
+  if (!alerts.length)
+    alerts.push({ cls: "info", t: "Sem alerta extremo no momento — mercado em zona intermediária." });
+  alerts.push({ cls: "info", t: `Score ${fmt(score,1)}/10 · Fase (interpretação): ${phase}` });
+  document.getElementById("alertsBox").innerHTML = alerts.map(a =>
+    `<div class="alert ${a.cls}">${a.t}</div>`
+  ).join("");
+
+  document.getElementById("etfCtx").textContent =
+    `Contexto local: F&G ${fng != null ? Math.round(fng) : "—"} · Funding ${fundingPct != null ? fmt(fundingPct,4)+"%" : "—"} · Dom ${globalDom != null ? fmt(globalDom,1)+"%" : "—"} · Pi ${piDist != null ? fmt(piDist,2)+"%" : "—"}`;
+
+  // Full skill table
+  renderSkillTable(buildSkillRows({
+    btc, asOf, sma50, sma111, sma200, sma350, sma350x2, mayer,
+    fng, fngClass, rsi, piDist, piCrossed, chartN: chartPrices.length
+  }));
+
+  // Price chart (last 30)
+  const last30 = chartPrices.slice(-30);
+  const labels = last30.map((_, i) => `${i+1}`);
+  if (priceChart) priceChart.destroy();
+  priceChart = new Chart(document.getElementById("priceChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "BTC USD",
+        data: last30,
+        borderColor: "#f7931a",
+        backgroundColor: "rgba(247,147,26,.12)",
+        fill: true, tension: .25, pointRadius: 0,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: "#8b9bb0", maxTicksLimit: 8 }, grid: { color: "#1c2736" } },
+        y: { ticks: { color: "#8b9bb0" }, grid: { color: "#1c2736" } }
+      }
+    }
+  });
+
+  if (fngChart) fngChart.destroy();
+  fngChart = new Chart(document.getElementById("fngChart"), {
+    type: "line",
+    data: {
+      labels: fngHist.map((_, i) => i + 1),
+      datasets: [{
+        label: "F&G",
+        data: fngHist.map(x => x.v),
+        borderColor: "#a78bfa",
+        backgroundColor: "rgba(167,139,250,.12)",
+        fill: true, tension: .3, pointRadius: 0,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { min: 0, max: 100, ticks: { color: "#8b9bb0" }, grid: { color: "#1c2736" } }
+      }
+    }
+  });
+
+  document.getElementById("updAt").textContent = asOf;
+  document.getElementById("mktAt").textContent = MKT ? (MKT.updated_at||"").replace("T"," ").slice(0,19) + " BRT" : "falhou";
+  renderSources(errors);
+  setDot(errors.length === 0, errors.length > 0 && errors.length < 5);
+  if (errors.length) log("Avisos: " + errors.join(" | "));
+}
+
+document.getElementById("refreshBtn").onclick = load;
+load();
+setInterval(load, 90000);
+</script>
+</body>
+</html>

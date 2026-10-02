@@ -1,0 +1,8 @@
+# Trader (EVM)
+web3>=6.15
+eth-account>=0.11
+# Trader (Solana / Jupiter)
+solders>=0.21
+solana>=0.34
+base58>=2.1
+# Scouts, research e dashboard usam só stdlib (Python 3.10+) + curl/jq nos .sh
