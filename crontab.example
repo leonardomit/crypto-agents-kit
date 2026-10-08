@@ -11,6 +11,12 @@ KIT=$HOME/crypto-agents-kit
 0 10,12,14,16,18 * * 1-5 /bin/bash $KIT/scouts/polymarket/run-polymarket-scout.sh >>/tmp/cak-poly.log 2>&1
 # On-chain BTC snapshot
 30 8,18 * * 1-5 /bin/bash $KIT/scouts/onchain-btc/run-onchain.sh >>/tmp/cak-onchain.log 2>&1
-# pump.fun PAPER (simulação) a cada 15 min + resumo diário
+# pump.fun PAPER (simulação) a cada 15 min + checagem de posições a cada 5 min (v3) + resumo diário
 */15 * * * * /bin/bash $KIT/scouts/pumpfun-paper/run-pumpfun.sh
+*/5 * * * * /bin/bash $KIT/scouts/pumpfun-paper/run-pumpfun.sh --positions-only
 55 23 * * * python3 $KIT/scouts/pumpfun-paper/pumpfun_daily.py >>/tmp/cak-pumpfun-daily.log 2>&1
+# Auditoria de rotinas (segunda; precisa de out/routines-inventory.json)
+0 9 * * 1 /bin/bash $KIT/scouts/auditoria-rotinas/run-auditoria.sh >>/tmp/cak-auditoria.log 2>&1
+# Espelho opcional no Obsidian
+3,18,33,48 8-23 * * * VAULT_SYNC_LAYOUT=kit python3 $KIT/hermes/vault-sync/sync_vault.py >>/tmp/cak-vault-sync.log 2>&1
+# Instância com Hermes Agent: ver hermes/crontab.hermes.example

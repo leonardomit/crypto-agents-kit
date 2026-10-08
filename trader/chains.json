@@ -1,0 +1,281 @@
+{
+ "generated_at": "2026-10-02T13:23:34-0300",
+ "verified": true,
+ "chains": {
+  "base": {
+   "chain_id": 8453,
+   "native": "ETH",
+   "rpc": [
+    "https://mainnet.base.org",
+    "https://base-rpc.publicnode.com"
+   ],
+   "tokens": {
+    "usdc": {
+     "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+     "expect_decimals": 6,
+     "doc": "https://developers.circle.com/stablecoins/usdc-contract-addresses",
+     "note": "Circle native USDC (NOT USDbC)",
+     "code_len": 1852,
+     "code_ok": true,
+     "symbol": "USDC",
+     "decimals": 6,
+     "decimals_ok": true,
+     "ok": true
+    },
+    "weth": {
+     "address": "0x4200000000000000000000000000000000000006",
+     "expect_decimals": 18,
+     "doc": "https://docs.base.org/base-chain/network-information/base-contracts ; https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments",
+     "code_len": 2041,
+     "code_ok": true,
+     "symbol": "WETH",
+     "decimals": 18,
+     "decimals_ok": true,
+     "ok": true
+    },
+    "ausdc_aave": {
+     "address": "0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB",
+     "expect_decimals": 6,
+     "doc": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Base.sol",
+     "note": "aBasUSDC",
+     "code_len": 1933,
+     "code_ok": true,
+     "symbol": "aBasUSDC",
+     "decimals": 6,
+     "decimals_ok": true,
+     "ok": true
+    }
+   },
+   "contracts": {
+    "uniswap_v3_factory": {
+     "address": "0x33128a8fC17869897dcE68Ed026d694621f6FDfD",
+     "doc": "https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments",
+     "code_len": 24535,
+     "code_ok": true,
+     "ok": true
+    },
+    "uniswap_v3_swaprouter02": {
+     "address": "0x2626664c2603336E57B271c5C0b26F421741e481",
+     "doc": "https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments",
+     "kind": "sr02",
+     "code_len": 24497,
+     "code_ok": true,
+     "ok": true
+    },
+    "uniswap_universal_router": {
+     "address": "0x6fF5693b99212Da76ad316178A184AB56D299b43",
+     "doc": "https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments",
+     "code_len": 19499,
+     "code_ok": true,
+     "ok": true
+    },
+    "uniswap_v3_quoterv2": {
+     "address": "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a",
+     "doc": "https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments",
+     "code_len": 8273,
+     "code_ok": true,
+     "ok": true
+    },
+    "permit2": {
+     "address": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+     "doc": "https://docs.uniswap.org/contracts/v3/reference/deployments/base-deployments",
+     "code_len": 9152,
+     "code_ok": true,
+     "ok": true
+    },
+    "aerodrome_router": {
+     "address": "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43",
+     "doc": "https://github.com/aerodrome-finance/contracts (README deployment table)",
+     "code_len": 23581,
+     "code_ok": true,
+     "ok": true
+    },
+    "aerodrome_pool_factory": {
+     "address": "0x420DD381b31aEf6683db6B902084cB0FFECe40Da",
+     "doc": "https://github.com/aerodrome-finance/contracts (README deployment table)",
+     "code_len": 3516,
+     "code_ok": true,
+     "ok": true
+    },
+    "aave_v3_pool_addresses_provider": {
+     "address": "0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D",
+     "doc": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Base.sol",
+     "code_len": 6922,
+     "code_ok": true,
+     "ok": true
+    },
+    "aave_v3_pool": {
+     "address": "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5",
+     "doc": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3Base.sol",
+     "code_len": 1933,
+     "code_ok": true,
+     "ok": true
+    },
+    "op_gas_price_oracle": {
+     "address": "0x420000000000000000000000000000000000000F",
+     "doc": "https://docs.base.org/base-chain/network-information/base-contracts",
+     "code_len": 2055,
+     "code_ok": true,
+     "ok": true
+    }
+   },
+   "cross_checks": {
+    "aave_provider.getPool==pool": true,
+    "aUSDC.UNDERLYING_ASSET_ADDRESS==usdc": true,
+    "sr02.factory==uni_factory": true,
+    "sr02.WETH9==weth": true,
+    "quoter.factory==uni_factory": true,
+    "aero_router.defaultFactory==aero_factory": true,
+    "aero_router.weth==weth": true
+   },
+   "failures": []
+  },
+  "bnb": {
+   "chain_id": 56,
+   "native": "BNB",
+   "rpc": [
+    "https://bsc-dataseed.bnbchain.org",
+    "https://bsc-rpc.publicnode.com"
+   ],
+   "tokens": {
+    "usdt": {
+     "address": "0x55d398326f99059fF775485246999027B3197955",
+     "expect_decimals": 18,
+     "doc": "https://docs-v4.venus.io/deployed-contracts/markets (BNB Chain Mainnet > Core Pool) ; https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3BNB.sol",
+     "note": "Binance-Peg BSC-USD, 18 decimals",
+     "code_len": 4413,
+     "code_ok": true,
+     "symbol": "USDT",
+     "decimals": 18,
+     "decimals_ok": true,
+     "ok": true
+    },
+    "usdc": {
+     "address": "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+     "expect_decimals": 18,
+     "doc": "https://docs-v4.venus.io/deployed-contracts/markets (BNB Chain Mainnet > Core Pool) ; https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3BNB.sol",
+     "note": "Binance-Peg USDC, 18 decimals (not Circle-native; not on Circle list)",
+     "code_len": 1596,
+     "code_ok": true,
+     "symbol": "USDC",
+     "decimals": 18,
+     "decimals_ok": true,
+     "ok": true
+    },
+    "wbnb": {
+     "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+     "expect_decimals": 18,
+     "doc": "https://docs-v4.venus.io/deployed-contracts/markets (BNB Chain Mainnet > Core Pool) ; https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3BNB.sol",
+     "code_len": 3124,
+     "code_ok": true,
+     "symbol": "WBNB",
+     "decimals": 18,
+     "decimals_ok": true,
+     "ok": true
+    },
+    "vusdt_venus": {
+     "address": "0xfD5840Cd36d94D7229439859C0112a4185BC0255",
+     "expect_decimals": 8,
+     "doc": "https://docs-v4.venus.io/deployed-contracts/markets (BNB Chain Mainnet > Core Pool)",
+     "code_len": 4744,
+     "code_ok": true,
+     "symbol": "vUSDT",
+     "decimals": 8,
+     "decimals_ok": true,
+     "ok": true
+    },
+    "ausdt_aave": {
+     "address": "0xa9251ca9DE909CB71783723713B21E4233fbf1B1",
+     "expect_decimals": 18,
+     "doc": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3BNB.sol",
+     "code_len": 1933,
+     "code_ok": true,
+     "symbol": "aBnbUSDT",
+     "decimals": 18,
+     "decimals_ok": true,
+     "ok": true
+    }
+   },
+   "contracts": {
+    "pancake_v3_factory": {
+     "address": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+     "doc": "https://developer.pancakeswap.finance/contracts/v3/addresses",
+     "code_len": 5151,
+     "code_ok": true,
+     "ok": true
+    },
+    "pancake_v3_swaprouter": {
+     "address": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
+     "doc": "https://developer.pancakeswap.finance/contracts/v3/addresses",
+     "kind": "sr01",
+     "code_len": 12154,
+     "code_ok": true,
+     "ok": true
+    },
+    "pancake_smart_router": {
+     "address": "0x13f4EA83D0bd40E75C8222255bc855a974568Dd4",
+     "doc": "https://developer.pancakeswap.finance/contracts/v3/addresses",
+     "kind": "sr02",
+     "code_len": 24316,
+     "code_ok": true,
+     "ok": true
+    },
+    "pancake_v3_quoterv2": {
+     "address": "0xB048Bbc1Ee6b733FFfCFb9e9CeF7375518e25997",
+     "doc": "https://developer.pancakeswap.finance/contracts/v3/addresses",
+     "code_len": 8331,
+     "code_ok": true,
+     "ok": true
+    },
+    "pancake_v2_router": {
+     "address": "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+     "doc": "https://developer.pancakeswap.finance/contracts/v2/addresses",
+     "code_len": 21936,
+     "code_ok": true,
+     "ok": true
+    },
+    "pancake_v2_factory": {
+     "address": "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73",
+     "doc": "https://developer.pancakeswap.finance/contracts/v2/addresses",
+     "code_len": 19084,
+     "code_ok": true,
+     "ok": true
+    },
+    "venus_core_comptroller": {
+     "address": "0xfD36E2c2a6789Db23113685031d7F16329158384",
+     "doc": "https://docs-v4.venus.io/deployed-contracts/markets (BNB Chain Mainnet > Core Pool)",
+     "code_len": 1508,
+     "code_ok": true,
+     "ok": true
+    },
+    "aave_v3_pool_addresses_provider": {
+     "address": "0xff75B6da14FfbbfD355Daf7a2731456b3562Ba6D",
+     "doc": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3BNB.sol",
+     "code_len": 6922,
+     "code_ok": true,
+     "ok": true
+    },
+    "aave_v3_pool": {
+     "address": "0x6807dc923806fE8Fd134338EABCA509979a7e0cB",
+     "doc": "https://github.com/bgd-labs/aave-address-book/blob/main/src/AaveV3BNB.sol",
+     "code_len": 1933,
+     "code_ok": true,
+     "ok": true
+    }
+   },
+   "cross_checks": {
+    "aave_provider.getPool==pool": true,
+    "aUSDT.UNDERLYING_ASSET_ADDRESS==usdt": true,
+    "vUSDT.underlying==usdt": true,
+    "vUSDT.comptroller==core": true,
+    "pcs_v3_router.factory==pcs_v3_factory": true,
+    "pcs_v3_router.WETH9==wbnb": true,
+    "smart_router.factory==pcs_v3_factory": true,
+    "quoter.factory==pcs_v3_factory": true,
+    "v2_router.factory==v2_factory": true,
+    "v2_router.WETH==wbnb": true
+   },
+   "failures": []
+  }
+ }
+}

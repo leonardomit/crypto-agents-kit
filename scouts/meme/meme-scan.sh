@@ -1,4 +1,5 @@
 #!/bin/bash
+# 2026-10-02: + change5m/change6h/volume1h/txns1h no raw (p/ filtro de máxima 1h do digest).
 # 2026-09-29: + ethereum (token-pairs por endereço) e bsc; busca filtra chain + símbolo antes de pegar top 6.
 set -euo pipefail
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -37,6 +38,11 @@ def add(chain, p):
         "volume24h": float((p.get("volume") or {}).get("h24") or 0),
         "change1h": float((p.get("priceChange") or {}).get("h1") or 0),
         "change24h": (p.get("priceChange") or {}).get("h24"),
+        # 2026-10-02: campos extras (mesma resposta, custo zero) p/ estimar máxima 1h no digest
+        "change5m": (p.get("priceChange") or {}).get("m5"),
+        "change6h": (p.get("priceChange") or {}).get("h6"),
+        "volume1h": (p.get("volume") or {}).get("h1"),
+        "txns1h": (p.get("txns") or {}).get("h1"),
         "url": p.get("url"),
         "dex": p.get("dexId"),
     })

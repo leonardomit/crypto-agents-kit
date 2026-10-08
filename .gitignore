@@ -23,3 +23,22 @@ __pycache__/
 venv/
 .DS_Store
 ._*
+# --- 2026-10-08: estado/histórico real do Trader e segredos (nunca commitar)
+positions-journal*.json
+**/reports/
+report-snapshot*.json
+*snapshot*.json
+*-latest.json
+*-live.json
+*.out.json
+wallet.address
+wallet.status.json
+secrets*.json
+*secrets*.json
+*.secret
+*.env
+config.env
+routines-inventory.json
+node_modules/
+package-lock.json
+*.tmp

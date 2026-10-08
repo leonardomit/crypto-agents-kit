@@ -48,7 +48,14 @@ SNAP_MIN_AGE_MIN, SNAP_MAX_AGE_MIN = 10, 40
 LIQ_DROP_VETO = 0.20                # v2: rejeita entrada se liquidez caiu >= 20% vs snapshot 15-30 min (ou 10-40)
 LIQ_DROP_EXIT = 0.20                # v2: posição aberta sai se liquidez cai >= 20% entre ciclos
 SNAP_HISTORY_MIN = 60               # mantém histórico de snapshots por mint (últimos 60 min)
-RULES_VERSION = 2
+RULES_VERSION = 3
+MIN_LP_LOCKED_PCT = 90.0            # v3: LP do pool de execução >= 90% travado/queimado (RugCheck markets[].lp.lpLockedPct)
+POS_RUNS_F = os.path.join(LOGDIR, "positions-runs.jsonl")
+POSITIONS_ONLY = "--positions-only" in sys.argv
+RULES_CHANGES_V3 = [
+    "monitoramento de posições abertas a cada 5 min, 24h/dia (modo --positions-only: sem rede se não há posição; sem novas varreduras; pula os minutos da varredura completa)",
+    f"LP do pool de execução precisa estar >= {MIN_LP_LOCKED_PCT:.0f}% travado/queimado (RugCheck markets[].lp.lpLockedPct); senão rejeita 'LP não travado/queimado (x%)'",
+]
 RULES_CHANGES_V2 = [
     "1ª observação nunca entra: exige snapshot anterior (10-40 min) e crescimento h1 vol/txns >= +10% vs ele (mín. 2 observações)",
     "ritmo m5 >= 1,0x média de 5 min da h1 (vol e txns) mantido como requisito adicional (não acelerar = não entra)",
@@ -287,6 +294,23 @@ def rpc_top10(mint, supply_raw, excl):
     # sem 'owner' aqui (precisaria 1 chamada por conta); exclui só endereços conhecidos
     return 100.0 * sum(fnum(a.get("amount")) for a in accs[:10]) / supply_raw if supply_raw else None
 
+def lp_locked_pct(rep, pair_addr):
+    """% do LP travado/queimado no market do RugCheck que corresponde ao pool de execução.
+    Se o pool não aparecer em markets[], usa o market com mais liquidez (marcado na info)."""
+    mkts = [m for m in (rep.get("markets") or []) if isinstance(m, dict)]
+    if not mkts: return None, "sem markets"
+    mk = next((m for m in mkts if m.get("pubkey") == pair_addr), None)
+    note = "pool de execução"
+    if mk is None:
+        mk = max(mkts, key=lambda m: fnum((m.get("lp") or {}).get("quoteUSD")) + fnum((m.get("lp") or {}).get("baseUSD")))
+        note = "pool de execução ausente no RugCheck; usado market mais líquido"
+    lp = mk.get("lp") or {}
+    pct = lp.get("lpLockedPct")
+    if pct is None:
+        lk, ul = fnum(lp.get("lpLocked")), fnum(lp.get("lpUnlocked"))
+        pct = 100.0 * lk / (lk + ul) if (lk + ul) > 0 else None
+    return (None if pct is None else round(fnum(pct), 2)), f"{mk.get('marketType')} {str(mk.get('pubkey'))[:8]} ({note})"
+
 def evaluate(mint, meta, pairs, st, budget):
     """Aplica todos os filtros. Retorna (passou, motivo, detalhes)."""
     det = {"mint": mint, "symbol": meta.get("symbol"), "fonte": meta.get("_src", "pumpfun")}
@@ -341,6 +365,11 @@ def evaluate(mint, meta, pairs, st, budget):
     if dangers: return False, "RugCheck danger: " + "; ".join(dangers[:3]), det
     sn = rep.get("score_normalised")
     if sn is None or fnum(sn) > MAX_RUG_SCORE_NORM: return False, f"RugCheck score_normalised {sn} > {MAX_RUG_SCORE_NORM}", det
+    # v3: LP travado/queimado no pool de execução (par mais líquido da DexScreener)
+    lp_pct, lp_info = lp_locked_pct(rep, pair.get("pairAddress"))
+    det["lp_locked_pct"], det["lp_market"] = lp_pct, lp_info
+    if lp_pct is None or lp_pct < MIN_LP_LOCKED_PCT:
+        return False, f"LP não travado/queimado ({'sem dado' if lp_pct is None else f'{lp_pct:.0f}%'})", det
     # top10 excluindo pool/curva/burn
     excl = {p.get("pairAddress") for p in pairs or []} | {meta.get("bonding_curve"), meta.get("associated_bonding_curve"),
              meta.get("pump_swap_pool"), meta.get("pool_address")}
@@ -471,17 +500,36 @@ def open_position(det, st, events):
     log(f"  >>> ENTRADA (paper) {det.get('symbol')} @ US${price:.8g} | slip {slip:.2%} ({slip_src})")
 
 # ----------------------------------------------------------------- main
+def positions_only():
+    """v3: só atualiza/fecha posições abertas. Sem posição -> sai sem rede e sem log."""
+    st = load_state()
+    if not st.get("open"):
+        return
+    events = []
+    log(f"[posições 5min] abertas={len(st['open'])} | dry={DRY}")
+    update_positions(st, events)
+    for ev in events:
+        ev["modo"] = "positions-only"
+        append_jsonl(EVENTS_F, ev)
+    st["last_positions_run"] = iso()
+    save_state(st)
+    append_jsonl(POS_RUNS_F, {"ts": iso(), "open": len(st["open"]), "events": [e["event"] for e in events],
+                              "sources": SRC, "realized_pnl_usd": round(st.get("realized_pnl_usd", 0), 4)})
+
 def main():
     os.makedirs(LOGDIR, exist_ok=True)
+    if POSITIONS_ONLY:
+        return positions_only()
     rotate_candidates()
     st = load_state()
     events = []
-    if st.get("rules_version", 1) < RULES_VERSION:
-        ev = {"ts": iso(), "event": "rules_change", "rules_version": RULES_VERSION,
-              "changes": RULES_CHANGES_V2, "paper": True}
+    changes_by_v = {2: RULES_CHANGES_V2, 3: RULES_CHANGES_V3}
+    for v in range(st.get("rules_version", 1) + 1, RULES_VERSION + 1):
+        ev = {"ts": iso(), "event": "rules_change", "rules_version": v,
+              "changes": changes_by_v.get(v, []), "paper": True}
         append_jsonl(EVENTS_F, ev)
-        st["rules_version"] = RULES_VERSION; st["rules_changed_at"] = ev["ts"]
-        log(f"regras v{RULES_VERSION} registradas (rules_change)")
+        st["rules_version"] = v; st["rules_changed_at"] = ev["ts"]
+        log(f"regras v{v} registradas (rules_change)")
     if "--rules-only" in sys.argv:
         save_state(st); return
     log(f"ciclo início | abertas={len(st['open'])} | dry={DRY}")
@@ -579,7 +627,7 @@ def _timeout(signum, frame):
 
 if __name__ == "__main__":
     import signal
-    signal.signal(signal.SIGALRM, _timeout); signal.alarm(720)
+    signal.signal(signal.SIGALRM, _timeout); signal.alarm(240 if POSITIONS_ONLY else 720)
     try:
         main()
     except Exception:

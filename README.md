@@ -40,10 +40,11 @@ ferramentas de research e um painel BTC on-chain.
 
 | Pasta | Conteúdo |
 |---|---|
-| [`scouts/`](scouts/) | defi (DefiLlama pools + lending), meme (DexScreener), polymarket (Gamma), pumpfun-paper (simulação), onchain-btc |
-| [`trader/`](trader/) | swap Uniswap v3 (single/multi-hop), LP enter/exit Uni v3, Aave supply, relatório de posições, swap Jupiter/Solana |
+| [`scouts/`](scouts/) | defi (DefiLlama pools + lending + `defi_scout.py` compartilhado), meme (DexScreener, confirmação cruzada), polymarket (Gamma), pumpfun-paper (simulação v3), onchain-btc, auditoria-rotinas |
+| [`trader/`](trader/) | swap Uniswap v3 (single/multi-hop, ARB cadastrado), LP enter/exit Uni v3 + monitor de saída OOR, Aave supply, bridge Relay (`bridge_exec.py`), multichain Base/BNB, relatório de posições, swap Jupiter/Solana |
 | [`agents/`](agents/) | prompts (perfil + rotinas) de DeFi Scout, Polymarket Scout, Trader, orquestrador e rotinas de push |
-| [`skills/`](skills/) | `relatorio-onchain-btc/SKILL.md` |
+| [`skills/`](skills/) | `relatorio-onchain-btc/SKILL.md`, `polymarket-scout/SKILL.md` (regras de edge do enrich) |
+| [`hermes/`](hermes/) | crontab e jobs (redigidos) para rodar no Hermes Agent, `vault-sync` para Obsidian |
 | [`research/`](research/) | comparador de opções (Deribit/Derive/Aevo) e de bridges (Across/LI.FI/Relay/deBridge) |
 | [`dashboard/`](dashboard/) | painel BTC on-chain estático (`btc-onchain.html` + `fetch_market.py`, dados públicos) |
 
@@ -63,6 +64,7 @@ bash scouts/meme/run-meme-scout.sh
 bash scouts/polymarket/run-polymarket-scout.sh
 bash scouts/onchain-btc/run-onchain.sh
 bash scouts/pumpfun-paper/run-pumpfun.sh --dry
+bash scouts/auditoria-rotinas/run-auditoria.sh   # precisa de out/routines-inventory.json
 
 # trader (dry-run)
 python trader/validate-wallet.py
@@ -86,7 +88,11 @@ Veja [`crontab.example`](crontab.example). Resumo (America/Sao_Paulo, dias útei
 0 10,12,14,16,18 * * 1-5     bash $KIT/scouts/polymarket/run-polymarket-scout.sh
 30 8,18 * * 1-5              bash $KIT/scouts/onchain-btc/run-onchain.sh
 */15 * * * *                 bash $KIT/scouts/pumpfun-paper/run-pumpfun.sh
+*/5 * * * *                  bash $KIT/scouts/pumpfun-paper/run-pumpfun.sh --positions-only
+0 9 * * 1                    bash $KIT/scouts/auditoria-rotinas/run-auditoria.sh
 ```
+
+Rodando com Hermes Agent: [`hermes/crontab.hermes.example`](hermes/crontab.hermes.example). Novidades: [`CHANGELOG.md`](CHANGELOG.md).
 
 O trader **não** roda por cron direto: é acionado pelo agente Trader (que segue o gate).
 

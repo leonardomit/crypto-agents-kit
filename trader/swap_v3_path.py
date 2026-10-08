@@ -30,6 +30,8 @@ TOK = {
     "usdc": ("0xaf88d065e77c8cC2239327C5EDb3A432268e5831", 6),
     "weth": ("0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", 18),
     "magic": ("0x539bdE0d7Dbd336b79148AA742883198BBF60342", 18),
+    # ARB — doc https://docs.arbitrum.foundation/deployment-addresses ; bytecode ok (2593 B), symbol ARB, 18 dec (2026-10-08)
+    "arb": ("0x912CE59144191C1204E64559FE8253a0e49E6548", 18),
 }
 UNLIMITED_THRESHOLD = 1 << 200
 ERC20 = [

@@ -12,9 +12,17 @@ Nasceram de incidentes reais (ex.: tx enviada a um endereço de router sem bytec
 6. **Solana**: antes do send, todos os program IDs de topo da tx precisam estar na allowlist
    (Jupiter, Token, Token-2022, ATA, System, ComputeBudget). Reserva ~0.005 SOL para rent.
 7. **Chave privada** só via env/secret manager. Nunca impressa, nunca logada, nunca no chat.
-8. Sem bridge automático. Sem segundo swap/mint sem pedido/sinal novo.
+8. Sem bridge automático. Sem segundo swap/mint sem pedido/sinal novo. Bridge só com ok humano por rota, via
+   `bridge_exec.py` (contrato e spender numa allowlist fixa no código + bytecode, destino/recebedor/mínimo de saída
+   conferidos, orderId recomputado com o SDK oficial, approve exato, só 1 passo de depósito, teste de ~US$2 antes do
+   valor cheio). Nunca pelo site da bridge no navegador.
 9. Script falhou → **para e avisa**. Nada de fallback via browser/MetaMask.
 10. Gate do agente (`TRADER_MODE`): `manual` = humano aprova cada trade; `auto` = só ≤ teto e com 1–9 ok.
+11. **LP fora da faixa**: saída OOR pode ser automática (`lp_oor_watch.py --execute`: leitura a cada 1 min, sai
+   após 2 leituras seguidas fora da faixa, mínimo 98% do esperado, sem swap). Near-OOR (≤ 6 ticks) = preparar a saída.
+   Não abrir LP estreita com ETH em breakout forte.
+12. **Multichain (Base/BNB)**: todo endereço vem de `chains.json` verificado (`build_chains_registry.py`) e passa
+   por `assert_live_to_reg()`; live exige `DRY_RUN=0 --execute --i-understand-live`.
 
 ## Defaults de stop (relatórios)
 

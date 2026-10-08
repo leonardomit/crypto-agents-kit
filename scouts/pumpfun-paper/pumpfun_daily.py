@@ -6,7 +6,7 @@ Uso: pumpfun_daily.py [YYYY-MM-DD]   (padrão: hoje BRT)
        (--auto só gera se hoje for $PUMPFUN_FINAL_DAY)"""
 import json, os, sys, datetime, collections
 
-BASE = (os.environ.get("SCOUT_OUT_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "out"))
+BASE = (os.environ.get("SCOUT_OUT_DIR") or os.environ.get("PUMPFUN_BASE") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "out"))
 BRT = datetime.timezone(datetime.timedelta(hours=-3), "BRT")
 NOW = datetime.datetime.now(BRT)
 FINAL_DAY = os.environ.get("PUMPFUN_FINAL_DAY", "")  # YYYY-MM-DD do relatório final (--auto)
@@ -66,6 +66,49 @@ def open_positions_lines(st):
                      f"não realizado {usd(p.get('unrealized_usd'))}")
     return lines or ["- nenhuma"]
 
+def version_of_ts(ts, changes):
+    """Versão de regras vigente no instante ts (v1 antes do 1º rules_change)."""
+    v = 1
+    for c in changes:
+        if ts >= c["ts"]:
+            v = c.get("rules_version", v)
+    return v
+
+def version_table(evs, devs, day_prefix):
+    """Compara v1/v2/v3: sinais/entradas pela hora do evento; fechados/P&L/perda média/liq_drop
+    atribuídos à versão vigente na ENTRADA da posição (comparação justa entre conjuntos de regras)."""
+    changes = sorted([e for e in evs if e["event"] == "rules_change"], key=lambda e: e["ts"])
+    if not changes:
+        return []
+    entry_v, cur = {}, {}
+    for e in evs:                          # mapeia cada saída à entrada correspondente
+        if e["event"] == "entry":
+            cur[e.get("mint")] = version_of_ts(e["ts"], changes)
+        elif e["event"] in ("partial_exit", "exit"):
+            entry_v[id(e)] = cur.get(e.get("mint"), version_of_ts(e["ts"], changes))
+    vers = sorted({1} | {c.get("rules_version", 1) for c in changes})
+    rows = []
+    for v in vers:
+        sg = [e for e in devs if e["event"] == "signal" and version_of_ts(e["ts"], changes) == v]
+        en = [e for e in devs if e["event"] == "entry" and version_of_ts(e["ts"], changes) == v]
+        ex = [e for e in devs if e["event"] in ("partial_exit", "exit") and entry_v.get(id(e)) == v]
+        cl = [e for e in ex if e["event"] == "exit"]
+        w = [e for e in cl if (e.get("trade_pnl_usd") or 0) > 0]
+        losses = [e.get("trade_pnl_usd") or 0 for e in cl if (e.get("trade_pnl_usd") or 0) < 0]
+        pn = sum(e.get("pnl_usd", 0) for e in ex)
+        liq = sum(1 for e in cl if str(e.get("exit_reason") or "").startswith("liq_drop"))
+        rows.append(f"| v{v} | {len(sg)} | {len(en)} | {len(cl)} | " + (f"{100*len(w)/len(cl):.0f}%" if cl else "—")
+                    + f" | {pn:+.2f} | " + (f"{sum(losses)/len(losses):+.2f}" if losses else "—") + f" | {liq} |")
+    L = ["## Comparação por versão de regras (v1 / v2 / v3)", "",
+         "_Sinais/entradas contam pela hora do evento; fechados, P&L, perda média e saídas liq_drop contam pela versão vigente na entrada da posição"
+         + (" (eventos deste dia)" if day_prefix else "") + "._", "",
+         "| Versão | Sinais | Entradas | Fechados | Acerto | P&L realizado US$ | Perda média US$ | Saídas liq_drop |",
+         "|---|---:|---:|---:|---:|---:|---:|---:|"] + rows + [""]
+    for c in changes:
+        L.append(f"- v{c.get('rules_version')} desde {c['ts']}: " + " / ".join(c.get("changes") or []))
+    L.append("")
+    return L
+
 def report(day_prefix=None, title=None):
     evs = rj(os.path.join(BASE, "pumpfun-paper.jsonl"))
     runs = rj(os.path.join(BASE, "logs", "runs.jsonl"))
@@ -82,6 +125,7 @@ def report(day_prefix=None, title=None):
     pnl_cum = sum(e.get("pnl_usd", 0) for e in evs if e["event"] in ("partial_exit", "exit"))
     unreal = sum(p.get("unrealized_usd") or 0 for p in st.get("open", []))
     fatal = [r for r in druns if r.get("fatal")]
+    pruns = [r for r in rj(os.path.join(BASE, "logs", "positions-runs.jsonl")) if sel(r.get("ts", ""))]
     rej = collections.Counter()
     for r in druns:
         for k, v in ((r.get("stats") or {}).get("rejeicoes") or {}).items(): rej[k] += v
@@ -89,7 +133,7 @@ def report(day_prefix=None, title=None):
     L = [f"# {title}", "",
          f"_Gerado em {NOW.isoformat(timespec='seconds')} (BRT). **Simulação (paper trading) — nenhuma ordem real.**_", "",
          "## Números", "",
-         f"- Ciclos executados: {len(druns)} (erros fatais: {len(fatal)})",
+         f"- Ciclos executados: {len(druns)} varreduras (erros fatais: {len(fatal)}) + {len(pruns)} checagens de posição (5 min)",
          f"- Candidatos avaliados (soma dos ciclos): {cand_eval}",
          f"- Sinais (aprovados em todos os filtros): {len(signals)}",
          f"- Entradas (US$4 cada): {len(entries)}",
@@ -112,24 +156,7 @@ def report(day_prefix=None, title=None):
             L.append(f"| {e['ts'][11:16] if day_prefix else e['ts'][:16]} | {e['event']} | {e.get('symbol')} | {(e.get('price_usd') or 0):.8g} | "
                      f"{e.get('exit_reason') or 'sinal'} | {e.get('pnl_usd', 0):+.2f} |")
         L.append("")
-    rc = [e for e in evs if e["event"] == "rules_change"]
-    if rc:
-        cut = rc[-1]["ts"]
-        def blk(xs):
-            en = [e for e in xs if e["event"] == "entry"]
-            sg = [e for e in xs if e["event"] == "signal"]
-            cl = [e for e in xs if e["event"] == "exit"]
-            w = [e for e in cl if (e.get("trade_pnl_usd") or 0) > 0]
-            pn = sum(e.get("pnl_usd", 0) for e in xs if e["event"] in ("partial_exit", "exit"))
-            return [len(sg), len(en), len(cl), (f"{100*len(w)/len(cl):.0f}%" if cl else "—"), f"{pn:+.2f}"]
-        before = [e for e in devs if e.get("ts", "") < cut]
-        after = [e for e in devs if e.get("ts", "") >= cut]
-        b, a2 = blk(before), blk(after)
-        L += [f"## Antes vs depois da mudança de regras (v{rc[-1].get('rules_version')}, {cut})", "",
-              "_Saídas contam no lado em que ocorreram (uma posição aberta antes pode fechar depois)._", "",
-              "| | Sinais | Entradas | Fechados | Acerto | P&L realizado US$ |", "|---|---:|---:|---:|---:|---:|",
-              "| Antes | " + " | ".join(map(str, b)) + " |", "| Depois | " + " | ".join(map(str, a2)) + " |", ""]
-        L += ["Mudanças: " + " / ".join(rc[-1].get("changes") or []), ""]
+    L += version_table(evs, devs, day_prefix)
     L += ["## Posições abertas", ""] + open_positions_lines(st) + [""]
     L += ["## Principais motivos de rejeição", ""]
     L += [f"- {k}: {v}" for k, v in rej.most_common(8)] or ["- —"]
@@ -137,7 +164,7 @@ def report(day_prefix=None, title=None):
     if fatal:
         L += ["", "### Erros fatais", ""] + [f"- {r['ts']}: `{r['fatal'].strip().splitlines()[-1]}`" for r in fatal[:5]]
     L += ["", "---", "Regras: entrada US$4; máx. 2 posições; 50% em +50%, restante em +100%, stop −30%, time stop 4h; "
-          "slippage = priceImpact Jupiter (mín. 0,5%/perna). v2 (a partir do rules_change): mín. 2 observações + veto/saída por queda de liquidez >= 20%. "
+          "slippage = priceImpact Jupiter (mín. 0,5%/perna). v2: mín. 2 observações + veto/saída por queda de liquidez >= 20%; v3: posições checadas a cada 5 min 24h + LP >= 90% travado/queimado. "
           "Sem novas entradas após 08/10/2026 23:00 BRT."]
     return "\n".join(L) + "\n"
 

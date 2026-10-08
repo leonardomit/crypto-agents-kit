@@ -1,0 +1,86 @@
+{
+ "_nota": "Extrato REDIGIDO dos jobs cripto do ~/.hermes/cron/jobs.json (Hermes Agent). Só nome/agenda/prompt; deliver, ids, tokens e estado removidos. Ajuste workdir para o seu clone.",
+ "jobs": [
+  {
+   "name": "Analise Cripto",
+   "enabled": false,
+   "schedule": {
+    "kind": "cron",
+    "expr": "0 9 * * *",
+    "display": "0 9 * * *"
+   },
+   "script": null,
+   "no_agent": false,
+   "context_from": null,
+   "prompt": "Crie um relatório profissional de análise on-chain de criptomoedas com foco em tomada de decisão (compra e venda), seguindo exatamente a estrutura abaixo.\nAtivo analisado: Bitcoin (BTC)  \nObjetivo: gerar leitura clara, acionável e sem viés emocional  \nTom: técnico, direto, sem enrolação  \nPúblico: investidor intermediário/avançado\nRegras obrigatórias:\n•\tSempre interpretar os dados (não apenas descrever)\n•\tSempre indicar contexto de ciclo (início, meio, topo, correção)\n•\tSempre gerar sinais claros de entrada e saída\n•\tEvitar linguagem vaga como “pode subir”\n•\tUsar faixas numéricas realistas (mesmo que estimadas)\n•\tPriorizar on-chain + sentimento + macro\nEstrutura do relatório:\n1.\tResumo rápido (3–5 bullets)\n•\tEstado do MVRV Z-Score\n•\tSituação geral do ciclo\n•\tSentimento (Fear & Greed)\n•\tConclusão objetiva\n1.\t3 frases para decisão\n•\tTendência principal\n•\tComportamento dos holders\n•\tEstratégia recomendada\n1.\tScore de mercado (0 a 10)\n•\tJustificar brevemente\n1.\tSinais operacionais\n•\tSinal de entrada (verde, amarelo ou vermelho)\n•\tSinal de saída (verde, amarelo ou vermelho)\n•\tExplicar de forma prática (quando comprar, quando evitar, quando reduzir)\n1.\tTabela de métricas (com interpretação)\nIncluir:\n•\tMVRV Z-Score\n•\tMVRV clássico\n•\tMayer Multiple\n•\tRealized Price\n•\tSOPR\n•\tNUPL\n•\tCDD\n•\tFear & Greed\n•\tHash Ribbons\n•\tPuell Multiple\n•\tPi Cycle Top\n1.\tPanorama de mercado\n•\tEstrutura on-chain\n•\tComportamento de holders\n•\tPressão de venda\n•\tSituação da mineração\n1.\tNotícias relevantes\n•\tETFs / fluxo institucional\n•\tLiquidez global\n•\tDerivativos\n•\tReservas em exchanges\n1.\tSinais detalhados de entrada\n•\tQuando comprar (ex: recuo até X indicador)\n•\tQuando evitar\n•\tRelação risco/retorno\n1.\tSinais detalhados de saída\n•\tQuando realizar parcial\n•\tQuando sair totalmente\n•\tO que invalidaria o cenário\n1.\tConclusão final\n•\tDireção do mercado\n•\tEstratégia recomendada (acumular, distribuir, neutro)\nExtras obrigatórios:\n•\tPriorizar “comprar em correção vs comprar rompimento”\n•\tIdentificar se há euforia ou ainda espaço\n•\tIndicar se holders antigos estão vendendo ou segurando\nFormato:\n•\tUsar emojis moderados (📊 📈 🟢 🟡 🔴)\n•\tClareza > volume\n•\tLinguagem objetiva",
+   "workdir": null,
+   "deliver": "<seu canal (ex.: telegram:<chat>) — REDACTED>"
+  },
+  {
+   "name": "DeFi Scout",
+   "enabled": true,
+   "schedule": {
+    "kind": "cron",
+    "expr": "1,46 9-18 * * 1-5",
+    "display": "1,46 9-18 * * 1-5"
+   },
+   "script": "defi_scout.py",
+   "no_agent": true,
+   "context_from": null,
+   "prompt": "",
+   "workdir": "$KIT/scouts/defi/out",
+   "deliver": "<seu canal (ex.: telegram:<chat>) — REDACTED>"
+  },
+  {
+   "name": "On-Chain BTC Report",
+   "enabled": true,
+   "schedule": {
+    "kind": "cron",
+    "expr": "32 8,18 * * 1-5",
+    "display": "32 8,18 * * 1-5"
+   },
+   "script": null,
+   "no_agent": false,
+   "context_from": [
+    "self"
+   ],
+   "prompt": "Execute o relatorio on-chain BTC conforme AGENTS.md. Use snapshot.json. Complete metricas publicas possiveis. 3 frases decisao, score/10, sinais entrada/saida (Fraco/Moderado/Forte ou inexistente). Nao invente MVRV/NUPL/SOPR — marque Dado atual nao confirmado. Atualize latest.md + history/. Sem trade/wallet. No final: score, sinal, path.",
+   "workdir": "$KIT/scouts/onchain-btc/out",
+   "deliver": "<seu canal (ex.: telegram:<chat>) — REDACTED>"
+  },
+  {
+   "name": "Polymarket Scout Enrich",
+   "enabled": true,
+   "schedule": {
+    "kind": "cron",
+    "expr": "1,46 9-18 * * 1-5",
+    "display": "1,46 9-18 * * 1-5"
+   },
+   "script": null,
+   "no_agent": false,
+   "context_from": [
+    "self"
+   ],
+   "prompt": "Execute Polymarket Scout conforme AGENTS.md. Enrich latest.md com edge/X/news publicas. So destaque |edge|≳8% ou risco forte. Sem trade/wallet. No final: acionavel sim/nao + path.",
+   "workdir": "$KIT/scouts/polymarket/out",
+   "deliver": "<seu canal (ex.: telegram:<chat>) — REDACTED>"
+  },
+  {
+   "name": "Auditoria de Rotinas Enrich",
+   "enabled": true,
+   "schedule": {
+    "kind": "cron",
+    "expr": "1 9 * * 1",
+    "display": "1 9 * * 1"
+   },
+   "script": null,
+   "no_agent": false,
+   "context_from": [
+    "self"
+   ],
+   "prompt": "Conforme AGENTS.md: enriquecer latest.md se houver candidata nova (esboco script). NUNCA aplicar. Sem candidata nova = diga isso. Final: candidatas N + path.",
+   "workdir": "$KIT/scouts/auditoria-rotinas/out",
+   "deliver": "<seu canal (ex.: telegram:<chat>) — REDACTED>"
+  }
+ ]
+}

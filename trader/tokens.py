@@ -14,6 +14,9 @@ TOKENS = {
         "weth": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
         "eth": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
         "usdc": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+        # ARB governance token — doc: https://docs.arbitrum.foundation/deployment-addresses ; eth_getCode len 2593,
+        # symbol ARB, decimals 18, verified 2026-10-08. Pools WETH/ARB 0.05% (0xC6F780497A95e246EB9449f5e4770916DCd6396A, deepest) / 0.3%.
+        "arb": "0x912CE59144191C1204E64559FE8253a0e49E6548",
     },
 }
 QUOTER_V2 = {
@@ -31,5 +34,5 @@ DENYLIST = {"arbitrum": {
     "0x68b3465833fb72a710882e39c25baaabfd80e577",  # SwapRouter02 docs empty
     "0x794a61358d6845594f94dc1db446a818166be8e4",  # Aave Pool typo/empty — use getPool()
 }}
-DECIMALS = {"usdc": 6, "weth": 18, "eth": 18}
+DECIMALS = {"usdc": 6, "weth": 18, "eth": 18, "arb": 18}
 FEE_TIERS = (500, 3000, 10000)

@@ -5,3 +5,5 @@ runtimes que suportam skills/workflows (Grok Bot, Claude Skills, etc.) ou para c
 
 - [`relatorio-onchain-btc/SKILL.md`](relatorio-onchain-btc/SKILL.md) — relatório on-chain BTC completo
   (MVRV, SOPR, NUPL, Mayer, F&G, Pi Cycle…), com score 0–10 e sinais de entrada/saída. Nunca inventa números.
+- [`polymarket-scout/SKILL.md`](polymarket-scout/SKILL.md) — skill do enrich do Polymarket Scout (Hermes): fontes que
+  funcionam em cron, armadilhas de dados da Gamma e regras de edge (só |edge| ≥ 8 pp; pesquisa ≠ P(vitória)).

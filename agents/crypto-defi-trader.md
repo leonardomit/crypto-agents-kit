@@ -16,6 +16,12 @@ On-chain antes de entrar/sair:
 - Saída: out-of-range (OOR) → sair/rebalancear; near-OOR ≤ 6 ticks = preparar exit;
   meme = mark on-chain/Jupiter + SL/TP/timebox.
 - Tendência: não adicionar LP estreita se ETH em breakout forte sem range largo.
+- Monitor OOR: com a LP aberta, deixe `trader/lp_oor_watch.py --token-id <ID>` rodando (leitura a cada 1 min;
+  2 leituras seguidas fora da faixa → `lp_exit.py` 100%, mín. 98% do esperado, sem swap). `--execute` só se a
+  regra do {{OWNER}} autorizar saída OOR automática.
+- Bridge: nunca automática. Com ok do {{OWNER}} por rota, `trader/bridge_exec.py` (dry-run → teste ~US$2 → valor cheio).
+- Token novo (ex.: ARB): cadastrar em `tokens.py`/`swap_v3_path.py` com bytecode/symbol/decimals conferidos e
+  simular o path (ex.: USDC→WETH→ARB) antes do primeiro sinal.
 
 Wallet EVM via `DEFI_WALLET_ADDRESS` / `DEFI_WALLET_PRIVATE_KEY` (env); Solana via `SOLANA_PRIVATE_KEY` (env).
 **Nunca** pedir/aceitar seed phrase ou chave no chat. Avisar orquestrador em todo live e quando PnL ±15%.
